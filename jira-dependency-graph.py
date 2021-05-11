@@ -99,9 +99,9 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         if fields['customfield_10024']:
             story_points = int(fields['customfield_10024'])
         priority = fields['priority']['name']
-        text = ''
+        sprint = ''
         if fields['customfield_10021']:
-            text = f'{fields["customfield_10021"][0]["name"]}\\n'
+            sprint = f'<{fields["customfield_10021"][0]["name"]}>\\n'
 
         if word_wrap == True:
             if len(summary) > MAX_SUMMARY_LENGTH:
@@ -114,7 +114,7 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
                 summary = fields['summary'][:MAX_SUMMARY_LENGTH] + '...'
         summary = summary.replace('"', '\\"')
 
-        jira_issues[issue_key] = f'"{issue_key} - {story_points} ({priority})\\n{text}{summary}"'
+        jira_issues[issue_key] = f'"{issue_key} - {story_points} ({priority})\\n{sprint}{summary}"'
         
         return jira_issues[issue_key]
 
