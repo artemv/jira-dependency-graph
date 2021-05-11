@@ -1,14 +1,6 @@
 TopScrum specific fork of jira-dependency-graph
 ====================
-This fork was created with TopScrum specific fields and link types in mind. For general non-TopScrum specific, check out the original at https://github.com/pawelrychlik/jira-dependency-graph
-
-jira-dependency-graph
-=====================
-
-Graph visualizer for dependencies between JIRA tickets. Takes into account subtasks and issue links.
-
-Uses JIRA rest API v2 for fetching information on issues.
-Uses [Google Chart API](https://developers.google.com/chart/) for graphical presentation.
+This fork was created with TopScrum specific fields and link types in mind, so that it's easy to spot blocking relationships between tickets. For general non-TopScrum specific, check out the original at https://github.com/pawelrychlik/jira-dependency-graph
 
 Requirements:
 =============
