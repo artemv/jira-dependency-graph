@@ -1,3 +1,7 @@
+TopScrum specific fork of jira-dependency-graph
+====================
+This fork was created with TopScrum specific fields and link types in mind. For general non-TopScrum specific, check out the original at https://github.com/pawelrychlik/jira-dependency-graph
+
 jira-dependency-graph
 =====================
 
@@ -6,67 +10,72 @@ Graph visualizer for dependencies between JIRA tickets. Takes into account subta
 Uses JIRA rest API v2 for fetching information on issues.
 Uses [Google Chart API](https://developers.google.com/chart/) for graphical presentation.
 
-Example output
-==============
-
-![Example graph](examples/issue_graph_complex.png)
-
 Requirements:
 =============
-* Python 2.7+ or Python 3+
-* [requests](http://docs.python-requests.org/en/master/)
-
-Or
-* [docker](https://docs.docker.com/install/)
+* [Python 3+](https://www.python.org/downloads/)
+* [Graphviz](https://graphviz.org/)
 
 Usage:
 ======
 ```bash
-$ git clone https://github.com/pawelrychlik/jira-dependency-graph.git
-$ virtualenv .virtualenv && source .virtualenv/bin/activate # OPTIONAL
+$ git clone https://github.com/teonimesic/jira-dependency-graph.git
 $ cd jira-dependency-graph
 $ pip install -r requirements.txt
-$ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site issue-key
 ```
 
-Or if you prefer running in docker:
-```bash
-$ git clone https://github.com/pawelrychlik/jira-dependency-graph.git
-$ cd jira-dependency-graph
-$ docker build -t jira .
-$ docker run -v $PWD/out:/out jira python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site --file=/out/output.png issue-key
+Then add the following to your .bashrc | .zshrc (replacing password with your user api token or password):
+```
+jira_email=""
+jira_password=""
+jira_dependency_graph_path="/path/to/jira-dependency-graph/jira-dependency-graph.py"
+jira_url=""
+
+jira-issue-blockers() {
+    python $jira_dependency_graph_path --ignore-closed --user=$jira_email --password=$jira_password --jira=$jira_url -x "relates to" -x clones -x "is cloned by" -x "is blocked by" -x "is child of Initiative" -w -T --local "$1" | dot -Tsvg > issue_blockers.svg
+}
+
+jira-jql-blockers() {
+    python $jira_dependency_graph_path --ignore-closed --user=$jira_email --password=$jira_password --jira=$jira_url -x "relates to" -x clones -x "is cloned by" -x "is blocked by" -x "is child of Initiative" -w -T --local --jql "$1" | dot -Tsvg > blockers.svg
+}
+
+jira-epic-blockers() {
+    python $jira_dependency_graph_path --ignore-closed --user=$jira_email --password=$jira_password --jira=$jira_url -x "relates to" -x clones -x "is cloned by" -x "is blocked by" -x "is child of Initiative" -w -T --local --jql "'Epic Link'=$1" | dot -Tsvg > epic-blockers.svg
+}
+
+jira-sprint-blocked() {
+    python $jira_dependency_graph_path --ignore-closed --user=$jira_email --password=$jira_password --jira=$jira_url -x "relates to" -x clones -x "is cloned by" -x "blocks" -x "is child of Initiative" -w -T --local --jql "sprint=$1" | dot -Tsvg > sprint-blocked.svg
+}
+
+jira-sprint-blockers() {
+    python $jira_dependency_graph_path --ignore-closed --user=$jira_email --password=$jira_password --jira=$jira_url -x "relates to" -x clones -x "is cloned by" -x "is blocked by" -x "is child of Initiative" -w -T --local --jql "sprint=$1" | dot -Tsvg > sprint-blockers.svg
+}
 ```
 
+And then use it like:
 ```
-# e.g.:
-$ python jira-dependency-graph.py --user=pawelrychlik --password=s3cr3t --jira=https://your-company.jira.com JIRATICKET-718
-
-Fetching JIRATICKET-2451
-JIRATICKET-2451 <= is blocked by <= JIRATICKET-3853
-JIRATICKET-2451 <= is blocked by <= JIRATICKET-3968
-JIRATICKET-2451 <= is blocked by <= JIRATICKET-3126
-JIRATICKET-2451 <= is blocked by <= JIRATICKET-2977
-Fetching JIRATICKET-3853
-JIRATICKET-3853 => blocks => JIRATICKET-2451
-JIRATICKET-3853 <= relates to <= JIRATICKET-3968
-Fetching JIRATICKET-3968
-JIRATICKET-3968 => blocks => JIRATICKET-2451
-JIRATICKET-3968 => relates to => JIRATICKET-3853
-Fetching JIRATICKET-3126
-JIRATICKET-3126 => blocks => JIRATICKET-2451
-JIRATICKET-3126 => testing discovered => JIRATICKET-3571
-Fetching JIRATICKET-3571
-JIRATICKET-3571 <= discovered while testing <= JIRATICKET-3126
-Fetching JIRATICKET-2977
-JIRATICKET-2977 => blocks => JIRATICKET-2451
-
-Writing to issue_graph.png
+jira-issue-blockers CRT-3116
+jira-jql-blockers 'fixVersion="Starfleet Contacts"'
+jira-epic-blockers CRT-2934
+jira-sprint-blocked 2209
+jira-sprint-blockers 2209
 ```
-Result:
-![Example result](examples/issue_graph.png)
 
+The reason why there are sprint-blocked and sprint-blockers, is that the first one helps you to find issues that you may be missing in your sprint and need to add them (by travesing blocked by until you find all tickets that you require), while the second helps you increase priority for tickets that have many dependencies or avoid adding them to the sprint.
 
-Advanced Usage:
+Sprint Blocked:
+![Sprint Blocked](examples/sprint-blocked.svg)
+
+Sprint Blockers:
+![Sprint Blocked](examples/sprint-blockers.svg)
+
+Lessons Learnt:
+===============
+
+Don't use Google's Graphviz, and instead install your own (by adding --local and sending the result to be parsed by `dot` as SVG). Either because of timeout or some other reason, it does not work well for more complex graphs. Also, I recommend usage of -T to avoid traversing to other projects such as PI (Portfolio Initiative), which will in turn go to every project you can imagine and download ALL tickets in existance. -w makes it a lot nicer to read the summary, and --ignore-closed omits traversing to Done tickets (very useful if you want to use this for checking blockers/blocked).
+
+Finally, while you can fetch all tickets of an epic by using jira-issue-blockers with the epic jira key, this will add the Epic as the root and make everything be connected with it, which looks bad, so I prefer to use jira-epic-blockers which simply fetches all tickets that belong to the epic directly.
+
+Advanced Usage if you want to use/customize your own bash functions:
 ===============
 
 List of all configuration options with descriptions:
