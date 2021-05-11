@@ -30,7 +30,9 @@ class JiraSearch(object):
         self.url = url + '/rest/api/latest'
         self.auth = auth
         self.no_verify_ssl = no_verify_ssl
-        self.fields = ','.join(['key', 'summary', 'status', 'description', 'issuetype', 'issuelinks', 'subtasks', 'customfield_10024', 'priority', 'customfield_10021'])
+        self.fields = ','.join([
+            'key', 'summary', 'status', 'description', 'issuetype', 'issuelinks', 'subtasks',
+            'customfield_10024', 'priority', 'customfield_10021', 'components'])
         self.issues = {}
 
     def get(self, uri, params={}):
@@ -94,7 +96,11 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
             return jira_issues[issue_key]
 
         # log(fields)
-        summary = fields['summary']
+        if fields['components']:
+            components = ','.join(map(lambda n: n['name'], fields['components']))
+            summary = f'[{components}] {fields["summary"]}'
+        else:
+            summary = fields['summary']
         story_points = 'N/A'
         if fields['customfield_10024']:
             story_points = int(fields['customfield_10024'])
@@ -106,12 +112,12 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         if word_wrap == True:
             if len(summary) > MAX_SUMMARY_LENGTH:
                 # split the summary into multiple lines adding a \n to each line
-                summary = textwrap.fill(fields['summary'], MAX_SUMMARY_LENGTH)
+                summary = textwrap.fill(summary, MAX_SUMMARY_LENGTH)
         else:
             # truncate long labels with "...", but only if the three dots are replacing more than two characters
             # -- otherwise the truncated label would be taking more space than the original.
             if len(summary) > MAX_SUMMARY_LENGTH + 2:
-                summary = fields['summary'][:MAX_SUMMARY_LENGTH] + '...'
+                summary = summary[:MAX_SUMMARY_LENGTH] + '...'
         summary = summary.replace('"', '\\"')
 
         jira_issues[issue_key] = f'"{issue_key} - {story_points} ({priority})\\n{sprint}{summary}"'
