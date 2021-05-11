@@ -30,7 +30,7 @@ class JiraSearch(object):
         self.url = url + '/rest/api/latest'
         self.auth = auth
         self.no_verify_ssl = no_verify_ssl
-        self.fields = ','.join(['key', 'summary', 'status', 'description', 'issuetype', 'issuelinks', 'subtasks', 'Story Points', 'priority', 'customfield_10021'])
+        self.fields = ','.join(['key', 'summary', 'status', 'description', 'issuetype', 'issuelinks', 'subtasks', 'customfield_10024', 'priority', 'customfield_10021'])
         self.issues = {}
 
     def get(self, uri, params={}):
@@ -93,9 +93,11 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         if issue_key in jira_issues:
             return jira_issues[issue_key]
 
-        log(fields)
+        # log(fields)
         summary = fields['summary']
-        story_points = int(fields['Story Points']) if 'Story Points' in fields else 'N/A'
+        story_points = 'N/A'
+        if fields['customfield_10024']:
+            story_points = int(fields['customfield_10024'])
         priority = fields['priority']['name']
         text = ''
         if fields['customfield_10021']:
