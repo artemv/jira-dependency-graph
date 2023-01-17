@@ -10,7 +10,7 @@ Requirements:
 Usage:
 ======
 ```bash
-$ git clone https://github.com/teonimesic/jira-dependency-graph.git
+$ git clone https://github.com/artemv/jira-dependency-graph.git
 $ cd jira-dependency-graph
 $ pip install -r requirements.txt
 ```
