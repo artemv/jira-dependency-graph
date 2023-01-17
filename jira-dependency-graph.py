@@ -121,7 +121,7 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         summary = summary.replace('"', '\\"')
 
         jira_issues[issue_key] = f'"{issue_key} - {story_points} ({priority})\\n{sprint}{summary}"'
-        
+
         return jira_issues[issue_key]
 
     def create_node_text(issue_key, fields, islink=True):
@@ -174,6 +174,9 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         else:
             fields = jira.get_issue(linked_issue_key)['fields']
             node = f'{create_node_text(issue_key, fields)}->{create_node_text(linked_issue_key, fields)}[label="{link_type}"{extra}]'
+            if (not fields['customfield_10021']):
+                log('Skipping ' + linked_issue_key + ' - it is not in a Sprint')
+                return
 
         return linked_issue_key, node
 
@@ -218,6 +221,8 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
             for other_link in fields['issuelinks']:
                 result = process_link(fields, issue_key, other_link)
                 if result is not None:
+                    if result[0] == 'EXP-2369':
+                      log(result)
                     log('Appending ' + result[0])
                     children.append(result[0])
                     if result[1] is not None:
