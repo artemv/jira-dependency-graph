@@ -73,7 +73,8 @@ class JiraSearch(object):
 
 
 def build_graph_data(start_issue_key, jira, excludes, show_directions, directions, includes, issue_excludes,
-                     ignore_closed, ignore_epic, ignore_subtasks, traverse, word_wrap, show_sprint, show_story_points):
+                     ignore_closed, ignore_epic, ignore_subtasks, traverse, word_wrap, show_sprint, show_story_points,
+                     exclude_type):
     jira_issues = {}
     """ Given a starting image key and the issue-fetching function build up the GraphViz data representing relationships
         between issues. This will consider both subtasks and issue links.
@@ -170,6 +171,10 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         if link_type.strip() in excludes:
             return
 
+        if linked_issue['fields']['issuetype']['name'] in exclude_type:
+            log('Skipping ' + linked_issue_key + f" - linked key is {linked_issue['fields']['issuetype']['name']}")
+            return
+
         arrow = ' => ' if direction == 'outward' else ' <= '
         log(issue_key + arrow + link_type + arrow + linked_issue_key)
 
@@ -198,6 +203,10 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
 
         if ignore_closed and (fields['status']['name'] in CLOSED_STATUS):
             log('Skipping ' + issue_key + ' - it is Closed')
+            return graph
+
+        if fields['issuetype']['name'] in exclude_type:
+            log('Skipping ' + issue_key + f" - it is {fields['issuetype']['name']}")
             return graph
 
         if not traverse and ((project_prefix + '-') not in issue_key):
@@ -276,6 +285,7 @@ def parse_args():
     parser.add_argument('-l', '--local', action='store_true', default=False, help='Render graphviz code to stdout')
     parser.add_argument('-e', '--ignore-epic', action='store_true', default=False, help='Don''t follow an Epic into it''s children issues')
     parser.add_argument('-x', '--exclude-link', dest='excludes', default=[], action='append', help='Exclude link type(s)')
+    parser.add_argument('-xt', '--exclude-type', dest='exclude_type', default=[], action='append', help='Exclude issue type(s)')
     parser.add_argument('-ic', '--ignore-closed', dest='closed', action='store_true', default=False, help='Ignore closed issues')
     parser.add_argument('-i', '--issue-include', dest='includes', default='', help='Include issue keys')
     parser.add_argument('-xi', '--issue-exclude', dest='issue_excludes', action='append', default=[], help='Exclude issue keys; can be repeated for multiple issues')
@@ -328,7 +338,7 @@ def main():
         graph = graph + build_graph_data(issue, jira, options.excludes, options.show_directions, options.directions,
                                          options.includes, options.issue_excludes, options.closed, options.ignore_epic,
                                          options.ignore_subtasks, options.traverse, options.word_wrap,
-                                         options.show_sprint, options.show_story_points)
+                                         options.show_sprint, options.show_story_points, options.exclude_type)
 
     if options.local:
         print_graph(filter_duplicates(graph), options.node_shape)
