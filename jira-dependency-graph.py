@@ -81,7 +81,9 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
     def get_key(issue):
         return issue['key']
 
-    def get_status_color(status_field):
+    def get_issue_color(status_field, issueType):
+        if issueType == 'Story':
+          return 'lightgrey'
         status = status_field['name'].upper()
         if status == 'IN PROGRESS':
             return 'yellow'
@@ -126,10 +128,11 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
 
     def create_node_text(issue_key, fields, islink=True):
         status = fields['status']
+        issueType = fields['issuetype']['name']
 
         if islink:
             return jira_issue_node(issue_key, fields)
-        return f'{jira_issue_node(issue_key, fields)} [href="{jira.get_issue_uri(issue_key)}", fillcolor="{get_status_color(status)}", style=filled]'
+        return f'{jira_issue_node(issue_key, fields)} [href="{jira.get_issue_uri(issue_key)}", fillcolor="{get_issue_color(status, issueType)}", style=filled]'
 
     def process_link(fields, issue_key, link):
         if 'outwardIssue' in link:
