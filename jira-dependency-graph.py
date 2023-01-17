@@ -73,7 +73,7 @@ class JiraSearch(object):
 
 
 def build_graph_data(start_issue_key, jira, excludes, show_directions, directions, includes, issue_excludes,
-                     ignore_closed, ignore_epic, ignore_subtasks, traverse, word_wrap):
+                     ignore_closed, ignore_epic, ignore_subtasks, traverse, word_wrap, show_sprint, show_story_points):
     jira_issues = {}
     """ Given a starting image key and the issue-fetching function build up the GraphViz data representing relationships
         between issues. This will consider both subtasks and issue links.
@@ -103,13 +103,16 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
             summary = f'[{components}] {fields["summary"]}'
         else:
             summary = fields['summary']
-        story_points = 'N/A'
-        if fields['customfield_10024']:
-            story_points = int(fields['customfield_10024'])
+        story_points = ''
+        if show_story_points == True:
+          story_points = ' - N/A'
+          if fields['customfield_10024']:
+              story_points = f" - {int(fields['customfield_10024'])}"
         priority = fields['priority']['name']
         sprint = ''
-        if fields['customfield_10021']:
-            sprint = f'<{fields["customfield_10021"][0]["name"]}>\\n'
+        if show_sprint == True:
+          if fields['customfield_10021']:
+              sprint = f'<{fields["customfield_10021"][0]["name"]}>\\n'
 
         if word_wrap == True:
             if len(summary) > MAX_SUMMARY_LENGTH:
@@ -122,7 +125,7 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
                 summary = summary[:MAX_SUMMARY_LENGTH] + '...'
         summary = summary.replace('"', '\\"')
 
-        jira_issues[issue_key] = f'"{issue_key} - {story_points} ({priority})\\n{sprint}{summary}"'
+        jira_issues[issue_key] = f'"{issue_key}{story_points} ({priority})\\n{sprint}{summary}"'
 
         return jira_issues[issue_key]
 
@@ -283,6 +286,8 @@ def parse_args():
     parser.add_argument('-t', '--ignore-subtasks', action='store_true', default=False, help='Don''t include sub-tasks issues')
     parser.add_argument('-T', '--dont-traverse', dest='traverse', action='store_false', default=True, help='Do not traverse to other projects')
     parser.add_argument('-w', '--word-wrap', dest='word_wrap', default=False, action='store_true', help='Word wrap issue summaries instead of truncating them')
+    parser.add_argument('-ss', '--show-sprint', dest='show_sprint', default=False, action='store_true', help='Show issue sprint name')
+    parser.add_argument('-sp', '--show-points', dest='show_story_points', default=False, action='store_true', help='Show story points')
     parser.add_argument('--no-verify-ssl', dest='no_verify_ssl', default=False, action='store_true', help='Don\'t verify SSL certs for requests')
     parser.add_argument('issues', nargs='*', help='The issue key (e.g. JRADEV-1107, JRADEV-1391)')
     return parser.parse_args()
@@ -322,7 +327,8 @@ def main():
     for issue in options.issues:
         graph = graph + build_graph_data(issue, jira, options.excludes, options.show_directions, options.directions,
                                          options.includes, options.issue_excludes, options.closed, options.ignore_epic,
-                                         options.ignore_subtasks, options.traverse, options.word_wrap)
+                                         options.ignore_subtasks, options.traverse, options.word_wrap,
+                                         options.show_sprint, options.show_story_points)
 
     if options.local:
         print_graph(filter_duplicates(graph), options.node_shape)
