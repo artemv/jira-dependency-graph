@@ -237,8 +237,6 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
             for other_link in fields['issuelinks']:
                 result = process_link(fields, issue_key, other_link)
                 if result is not None:
-                    if result[0] == 'EXP-2369':
-                      log(result)
                     log('Appending ' + result[0])
                     children.append(result[0])
                     if result[1] is not None:
