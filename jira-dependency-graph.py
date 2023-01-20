@@ -74,7 +74,7 @@ class JiraSearch(object):
 
 def build_graph_data(start_issue_key, jira, excludes, show_directions, directions, includes, issue_excludes,
                      ignore_closed, ignore_epic, ignore_subtasks, traverse, word_wrap, show_sprint, show_story_points,
-                     exclude_type, ignore_sprintless):
+                     exclude_type, ignore_sprintless, only_sprint):
     jira_issues = {}
     """ Given a starting image key and the issue-fetching function build up the GraphViz data representing relationships
         between issues. This will consider both subtasks and issue links.
@@ -185,10 +185,18 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         else:
             fields = jira.get_issue(linked_issue_key)['fields']
             node = f'{create_node_text(issue_key, fields)}->{create_node_text(linked_issue_key, fields)}[label="{link_type}"{extra}]'
+            sprints = fields['customfield_10021']
             if ignore_sprintless:
-              if (not fields['customfield_10021']):
+              if (not sprints):
                   log('Skipping ' + linked_issue_key + ' - it is not in a Sprint')
                   return
+            if only_sprint:
+                if not sprints:
+                    return
+                sprint_ids = list(map(lambda s: s['id'], sprints))
+                if (not sprints) or (not int(only_sprint) in sprint_ids):
+                    log(f"Skipping {linked_issue_key} - {sprint_ids} is not in {only_sprint} Sprint")
+                    return
 
         return linked_issue_key, node
 
@@ -298,6 +306,7 @@ def parse_args():
     parser.add_argument('-ss', '--show-sprint', dest='show_sprint', default=False, action='store_true', help='Show issue sprint name')
     parser.add_argument('-sp', '--show-points', dest='show_story_points', default=False, action='store_true', help='Show story points')
     parser.add_argument('-is', '--ignore-sprintless', dest='ignore_sprintless', default=False, action='store_true', help='Ignore issues not belonging to sprints')
+    parser.add_argument('-os', '--only-sprint', dest='only_sprint', default='', help='Include only issues from sprint')
     parser.add_argument('--no-verify-ssl', dest='no_verify_ssl', default=False, action='store_true', help='Don\'t verify SSL certs for requests')
     parser.add_argument('issues', nargs='*', help='The issue key (e.g. JRADEV-1107, JRADEV-1391)')
     return parser.parse_args()
@@ -339,7 +348,7 @@ def main():
                                          options.includes, options.issue_excludes, options.closed, options.ignore_epic,
                                          options.ignore_subtasks, options.traverse, options.word_wrap,
                                          options.show_sprint, options.show_story_points, options.exclude_type,
-                                         options.ignore_sprintless)
+                                         options.ignore_sprintless, options.only_sprint)
 
     if options.local:
         print_graph(filter_duplicates(graph), options.node_shape)
