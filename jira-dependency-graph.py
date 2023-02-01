@@ -44,13 +44,16 @@ class JiraSearch(object):
         else:
             return requests.get(url, params=params, auth=self.auth, headers=headers, verify=(not self.no_verify_ssl))
 
-    def get_issue(self, key):
+    def get_issue(self, key, why=""):
         """ Given an issue key (i.e. JRA-9) return the JSON representation of it. This is the only place where we deal
             with JIRA's REST API. """
         if key in self.issues:
             return self.issues[key]
 
-        log('Fetching ' + key)
+        msg = f'Fetching {key}'
+        if why != '':
+            msg = f'{msg}: {why}'
+        log(msg)
         # we need to expand subtasks and links since that's what we care about here.
         response = self.get('/issue/%s' % key, params={'fields': self.fields})
         response.raise_for_status()
@@ -175,15 +178,12 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
             log('Skipping ' + linked_issue_key + f" - linked key is {linked_issue['fields']['issuetype']['name']}")
             return
 
-        arrow = ' => ' if direction == 'outward' else ' <= '
-        log(issue_key + arrow + link_type + arrow + linked_issue_key)
-
         extra = ',color="red"' if link_type == "blocks" else ""
 
         if direction not in show_directions:
             node = None
         else:
-            fields = jira.get_issue(linked_issue_key)['fields']
+            fields = jira.get_issue(linked_issue_key, f'{link_type} {issue_key}')['fields']
             node = f'{create_node_text(issue_key, fields)}->{create_node_text(linked_issue_key, fields)}[label="{link_type}"{extra}]'
             sprints = fields['customfield_10021']
             if ignore_sprintless:
@@ -205,7 +205,7 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
 
     def walk(issue_key, graph):
         """ issue is the JSON representation of the issue """
-        issue = jira.get_issue(issue_key)
+        issue = jira.get_issue(issue_key, 'scope')
         children = []
         fields = issue['fields']
         seen.append(issue_key)
